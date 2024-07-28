@@ -7,7 +7,6 @@ import com.xjudge.model.submission.SubmissionInfoModel;
 import com.xjudge.service.scraping.strategy.SubmissionStrategy;
 import com.xjudge.util.driverpool.AtCoderPool;
 import com.xjudge.util.driverpool.WebDriverWrapper;
-import jakarta.annotation.PreDestroy;
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
@@ -21,7 +20,6 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class AtCoderSubmission implements SubmissionStrategy {
@@ -46,8 +44,8 @@ public class AtCoderSubmission implements SubmissionStrategy {
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         Instant submitTime = Instant.now();
         try {
-            String[] splittedCode = splitting.split(data.code());
-            String contestId = splittedCode[0];
+            String[] splitCode = splitting.split(data.code());
+            String contestId = splitCode[0];
             String url = String.format(SUBMIT_URL, contestId);
             driver.get(url);
             submitHelper(driver, wait, data, driverWrapper);
@@ -171,7 +169,7 @@ public class AtCoderSubmission implements SubmissionStrategy {
                 }
             } catch (Exception ex) {
                 pool.releaseDriver(driverWrapper);
-                throw new XJudgeException("FAIL_TO_SUBMIT" , AtCoderSubmission.class.getName(),HttpStatus.INTERNAL_SERVER_ERROR);
+                throw new XJudgeException("FAIL_TO_SUBMIT", HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
     }

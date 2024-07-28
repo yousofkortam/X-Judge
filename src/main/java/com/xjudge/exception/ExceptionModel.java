@@ -9,12 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ExceptionModel {
     private int statusCode;
-
     private String message;
-
-    private String location;
-
     private String timeStamp;
-
-    private String description;
 }

@@ -1,5 +1,5 @@
 package com.xjudge.util.driverpool;
 public interface DriverPool {
-    public WebDriverWrapper getDriverData();
+    WebDriverWrapper getDriverData();
     void releaseDriver(WebDriverWrapper driver);
 }

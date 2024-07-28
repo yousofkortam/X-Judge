@@ -3,7 +3,6 @@ package com.xjudge.service.user;
 import com.xjudge.entity.Token;
 import com.xjudge.entity.User;
 import com.xjudge.exception.XJudgeException;
-import com.xjudge.exception.XJudgeValidationException;
 import com.xjudge.mapper.UserMapper;
 import com.xjudge.model.enums.TokenType;
 import com.xjudge.model.invitation.InvitationModel;
@@ -16,14 +15,13 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.FieldError;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Service
@@ -43,49 +41,43 @@ public class UserServiceImpl implements UserService{
     @Override
     public User findUserByHandle(String userHandle) {
         return userRepo.findByHandle(userHandle).orElseThrow(
-                () -> new XJudgeException("There's no handle {" + userHandle + "}", UserServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("There's no handle {" + userHandle + "}")
         );
     }
 
     @Override
     public UserModel findUserModelByHandle(String userHandle) {
-        return userMapper.toModel(userRepo.findByHandle(userHandle).orElseThrow(
-                () -> new XJudgeException("There's no handle {" + userHandle + "}", UserServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
-        ));
+        return userMapper.toModel(this.findUserByHandle(userHandle));
     }
 
     @Override
     public User findUserByEmail(String userEmail) {
         return userRepo.findUserByEmail(userEmail).orElseThrow(
-                () -> new XJudgeException("There's no email {" + userEmail + "}", UserServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("There's no email {" + userEmail + "}")
         );
     }
 
     @Override
     public UserModel findUserModelByEmail(String userEmail) {
-        return userMapper.toModel(userRepo.findUserByEmail(userEmail).orElseThrow(
-                () -> new XJudgeException("There's no email {" + userEmail + "}", UserServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
-        ));
+        return userMapper.toModel(this.findUserByEmail(userEmail));
     }
 
     @Override
     public User findUserById(Long userId) {
         return userRepo.findById(userId).orElseThrow(
-                () -> new XJudgeException("There's no user with id {" + userId + "}", UserServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("There's no user with id {" + userId + "}")
         );
     }
 
     @Override
     public UserModel findUserModelById(Long userId) {
-        return userMapper.toModel(userRepo.findById(userId).orElseThrow(
-                () -> new XJudgeException("There's no user with id {" + userId + "}", UserServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
-        ));
+        return userMapper.toModel(this.findUserById(userId));
     }
 
     @Override
     public UserModel updateUser(Long id, UserModel user) {
         User oldUser = userRepo.findById(id).orElseThrow(
-                () -> new XJudgeException("User not found", UserServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("User not found")
         );
         oldUser.setHandle(user.getHandle());
         oldUser.setFirstName(user.getFirstName());
@@ -99,20 +91,14 @@ public class UserServiceImpl implements UserService{
     @Override
     @Transactional
     public UserModel updateUserByHandle(String handle, UserModel user) {
-        User oldUser = userRepo.findByHandle(handle).orElseThrow(
-                () -> new XJudgeException("User not found", UserServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
-        );
+        User oldUser = this.findUserByHandle(handle);
         oldUser.setFirstName(user.getFirstName());
         oldUser.setLastName(user.getLastName());
         oldUser.setSchool(user.getSchool());
 
         if (!oldUser.getEmail().equals(user.getEmail())) {
             if (userRepo.existsByEmail(user.getEmail())) {
-                List<FieldError> errors = new ArrayList<>();
-                String defaultMessage = "Email already exists";
-                FieldError error = new FieldError("email", "email", defaultMessage);
-                errors.add(error);
-                throw new XJudgeValidationException(errors, "Validation failed", UserServiceImpl.class.getName(), HttpStatus.BAD_REQUEST);
+                throw new IllegalArgumentException("Email already exists");
             }
             oldUser.setIsVerified(false);
             oldUser.setEmail(user.getEmail());
@@ -127,7 +113,7 @@ public class UserServiceImpl implements UserService{
     @Override
     public void deleteUser(Long userId) {
         User user = userRepo.findById(userId).orElseThrow(
-                () -> new XJudgeException("User not found", UserServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("User not found")
         );
         userRepo.delete(user);
     }
@@ -156,9 +142,7 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public boolean updateProfilePicture(String handle, MultipartFile profilePicture) {
-        User user = userRepo.findByHandle(handle).orElseThrow(
-                () -> new XJudgeException("User not found", UserServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
-        );
+        User user = this.findUserByHandle(handle);
         String uploadDirectory = "src/main/resources/static/images/profiles/";
         String originalFileName = handle + UUID.randomUUID() + profilePicture.getOriginalFilename();
         Path filePath = Paths.get(uploadDirectory, originalFileName);
@@ -168,7 +152,7 @@ public class UserServiceImpl implements UserService{
             userRepo.save(user);
             return true;
         } catch (Exception e) {
-            throw new XJudgeException("Cannot upload profile picture", UserServiceImpl.class.getName(), HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("Cannot upload profile picture", HttpStatus.BAD_REQUEST);
         }
     }
 

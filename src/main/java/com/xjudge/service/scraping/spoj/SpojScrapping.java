@@ -4,12 +4,10 @@ import com.xjudge.entity.Problem;
 import com.xjudge.entity.Property;
 import com.xjudge.entity.Section;
 import com.xjudge.entity.Value;
-import com.xjudge.exception.XJudgeException;
 import com.xjudge.model.enums.OnlineJudgeType;
 import com.xjudge.repository.PropertyRepository;
 import com.xjudge.repository.SectionRepository;
 import com.xjudge.repository.ValueRepository;
-import com.xjudge.service.scraping.codeforces.CodeforcesScrapping;
 import com.xjudge.service.scraping.strategy.ScrappingStrategy;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
@@ -17,12 +15,12 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.data.util.Pair;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 @Service
@@ -37,8 +35,8 @@ public class SpojScrapping implements ScrappingStrategy {
     @Override
     public Problem scrap(String code) {
         String URL = "https://www.spoj.com";
-        String[] splittedCode = spojSplitting.split(code);
-        String problemId = splittedCode[0];
+        String[] splitCode = spojSplitting.split(code);
+        String problemId = splitCode[0];
         String targetProblem = URL + "/problems/" + problemId;
         String contestName = "";
         System.out.println(targetProblem);
@@ -47,7 +45,7 @@ public class SpojScrapping implements ScrappingStrategy {
         try {
             problemDocument = Jsoup.connect(targetProblem).get();
         } catch (IOException e) {
-            throw new XJudgeException("Problem not found", CodeforcesScrapping.class.getName(), HttpStatus.NOT_FOUND);
+            throw new NoSuchElementException("Problem not found");
         }
 
         List<Property> properties = new ArrayList<>(List.of());

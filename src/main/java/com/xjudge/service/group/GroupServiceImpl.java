@@ -3,7 +3,6 @@ package com.xjudge.service.group;
 import com.xjudge.entity.*;
 import com.xjudge.entity.key.UserGroupKey;
 import com.xjudge.exception.XJudgeException;
-import com.xjudge.exception.XJudgeValidationException;
 import com.xjudge.mapper.GroupMapper;
 import com.xjudge.mapper.UserGroupMapper;
 import com.xjudge.model.enums.GroupVisibility;
@@ -26,8 +25,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 
 import java.security.Principal;
 import java.time.LocalDate;
@@ -47,9 +44,7 @@ public class GroupServiceImpl implements GroupService {
     private final UserGroupMapper userGroupMapper;
     private final UserGroupRepository userGroupRepository;
 
-    @Override
-    public Page<GroupModel> getAllGroups(Principal connectedUser,Pageable pageable) {
-        Page<Group> groups = groupRepository.findAll(pageable);
+    private Page<GroupModel> getGroupModelPage(Page<Group> groups, Principal connectedUser) {
         return groups.map(group -> GroupModel.builder()
                 .id(group.getId())
                 .name(group.getName())
@@ -57,24 +52,24 @@ public class GroupServiceImpl implements GroupService {
                 .creationDate(group.getCreationDate())
                 .visibility(group.getVisibility())
                 .leaderHandle(group.getLeaderHandle())
-                .userGroupRole(userGroupService.findRoleByUserAndGroupId(connectedUser,group.getId()))
+                .userGroupRole(
+                        connectedUser != null
+                                ? userGroupService.findRoleByUserAndGroupId(connectedUser, group.getId())
+                                : "")
                 .members(group.getGroupUsers().size())
                 .build());
     }
 
     @Override
-    public Page<GroupModel> getAllPublicGroups(Principal connectedUser,Pageable pageable) {
+    public Page<GroupModel> getAllGroups(Principal connectedUser, Pageable pageable) {
+        Page<Group> groups = groupRepository.findAll(pageable);
+        return getGroupModelPage(groups, connectedUser);
+    }
+
+    @Override
+    public Page<GroupModel> getAllPublicGroups(Principal connectedUser, Pageable pageable) {
         Page<Group> groups = groupRepository.findByVisibility(GroupVisibility.PUBLIC ,pageable);
-        return groups.map(group -> GroupModel.builder()
-                .id(group.getId())
-                .name(group.getName())
-                .description(group.getDescription())
-                .creationDate(group.getCreationDate())
-                .visibility(group.getVisibility())
-                .leaderHandle(group.getLeaderHandle())
-                .userGroupRole(userGroupService.findRoleByUserAndGroupId(connectedUser,group.getId()))
-                .members(group.getGroupUsers().size())
-                .build());
+        return getGroupModelPage(groups, connectedUser);
     }
 
     @Override
@@ -97,19 +92,26 @@ public class GroupServiceImpl implements GroupService {
     @Override
     public GroupModel getSpecificGroup(Long id) {
         Group group = groupRepository.findById(id).orElseThrow(
-                () -> new XJudgeException("Group not found", GroupServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("Group not found")
         );
         return groupMapper.toModel(group, group.getGroupUsers().size());
     }
 
     @Override
     public GroupModel getGroupById(Long id, Principal connectedUser) {
+        boolean isAuthenticated = connectedUser != null;
+        if (!isAuthenticated) {
+            return groupMapper.toModel(groupRepository.findById(id).orElseThrow(
+                    () -> new NoSuchElementException("Group not found")
+            ));
+        }
         Group group = groupRepository.findById(id).orElseThrow(
-                () -> new XJudgeException("Group not found", GroupServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("Group not found")
         );
         UserGroup userGroup = userGroupService.findByUserHandleAndGroupIdOrElseNull(connectedUser.getName(), id);
         boolean isMember = userGroup != null;
         boolean isLeader = isMember && userGroup.getRole() == UserGroupRole.LEADER;
+
 
         return groupMapper.toModel(group, group.getGroupUsers().size(), isMember, isLeader, connectedUser.getName());
     }
@@ -117,17 +119,7 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     @Transactional
-    public GroupModel create(GroupRequest groupRequest, Principal connectedUser, BindingResult bindingResult) {
-
-        if (bindingResult.hasErrors()) {
-            System.out.println("A7Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-            Map<String, String> errorMap = new HashMap<>();
-            for (FieldError error : bindingResult.getFieldErrors()) {
-                errorMap.put(error.getField(), error.getDefaultMessage());
-            }
-            throw new XJudgeValidationException(errorMap, "Validation failed", GroupServiceImpl.class.getName(), HttpStatus.BAD_REQUEST);
-        }
-
+    public GroupModel create(GroupRequest groupRequest, Principal connectedUser) {
         User leader = userService.findUserByHandle(connectedUser.getName());
         Group group = groupRepository.save(Group.builder()
                 .name(groupRequest.getName())
@@ -160,7 +152,7 @@ public class GroupServiceImpl implements GroupService {
                             group.setVisibility(groupRequest.getVisibility());
                             return groupRepository.save(group);
                         }).orElseThrow(
-                                () -> new XJudgeException("Group not found", GroupServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                                () -> new NoSuchElementException("Group not found")
                         ));
     }
 
@@ -169,21 +161,21 @@ public class GroupServiceImpl implements GroupService {
         groupRepository.findById(groupId)
                 .ifPresentOrElse(groupRepository::delete,
                         () -> {
-                            throw new XJudgeException("Group not found", GroupServiceImpl.class.getName(), HttpStatus.NOT_FOUND);
+                            throw new NoSuchElementException("Group not found");
                         });
     }
 
     @Override
     public void inviteUser(Long groupId, String receiverHandle, Principal connectedUser) {
         Group group = groupRepository.findById(groupId).orElseThrow(
-                () -> new XJudgeException("Group not found", GroupServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("Group not found")
         );
 
         User receiver = userService.findUserByHandle(receiverHandle);
         User sender = (User) ((UsernamePasswordAuthenticationToken) connectedUser).getPrincipal();
 
         if (sender.getId().equals(receiver.getId())) {
-            throw new XJudgeException("User cannot invite himself", GroupServiceImpl.class.getName(), HttpStatus.FORBIDDEN);
+            throw new XJudgeException("User cannot invite himself", HttpStatus.FORBIDDEN);
         }
 
         invitationService.save(Invitation.builder()
@@ -198,15 +190,15 @@ public class GroupServiceImpl implements GroupService {
     @Override
     public void join(Long groupId, Principal connectedUser) {
         Group group = groupRepository.findById(groupId).orElseThrow(
-                () -> new XJudgeException("Group not found", GroupServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("Group not found")
         );
         User user = userService.findUserByHandle(connectedUser.getName());
         if (isPrivate(group)) {
-            throw new XJudgeException("Group is private", GroupServiceImpl.class.getName(), HttpStatus.FORBIDDEN);
+            throw new XJudgeException("Group is private", HttpStatus.FORBIDDEN);
         }
         // Check if the user is not already in the group
         if (userGroupService.existsByUserAndGroup(user, group)) {
-            throw new XJudgeException("User is already in the group", GroupServiceImpl.class.getName(), HttpStatus.ALREADY_REPORTED);
+            throw new XJudgeException("User is already in the group", HttpStatus.ALREADY_REPORTED);
         }
         UserGroupKey userGroupKey = new UserGroupKey(user.getId(), groupId);
 
@@ -223,7 +215,7 @@ public class GroupServiceImpl implements GroupService {
         // Check if the user is not already in the group
         Group group = groupMapper.toEntity(groupModel);
         if (userGroupService.existsByUserAndGroup(user, group)) {
-            throw new XJudgeException("User is already in the group", GroupServiceImpl.class.getName(), HttpStatus.ALREADY_REPORTED);
+            throw new XJudgeException("User is already in the group", HttpStatus.ALREADY_REPORTED);
         }
         UserGroupKey userGroupKey = new UserGroupKey(user.getId(), group.getId());
 
@@ -239,7 +231,7 @@ public class GroupServiceImpl implements GroupService {
     public void requestJoin(Long groupId, Principal connectedUser) {
         User user = (User) ((UsernamePasswordAuthenticationToken) connectedUser).getPrincipal();
         Group group = groupRepository.findById(groupId).orElseThrow(
-                () -> new XJudgeException("Group not found", GroupServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("Group not found")
         );
         JoinRequest joinRequest = JoinRequest.builder()
                 .group(group)
@@ -252,10 +244,9 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     public void acceptRequest(Long requestId) {
-        // TODO check if user is the leader of the group in controller level before calling this method
         JoinRequest joinRequest = joinRequestService.findById(requestId);
         if (joinRequest.getStatus() != InvitationStatus.PENDING) {
-            throw new XJudgeException("Invalid request", GroupServiceImpl.class.getName(), HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("Invalid request", HttpStatus.BAD_REQUEST);
         }
         joinRequest.setStatus(InvitationStatus.ACCEPTED);
         joinRequestService.save(joinRequest);
@@ -263,10 +254,9 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     public void declineRequest(Long requestId) {
-        // TODO check if user is the leader of the group in controller level before calling this method
         JoinRequest joinRequest = joinRequestService.findById(requestId);
         if (joinRequest.getStatus() != InvitationStatus.PENDING) {
-            throw new XJudgeException("Invalid request", GroupServiceImpl.class.getName(), HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("Invalid request", HttpStatus.BAD_REQUEST);
         }
         joinRequest.setStatus(InvitationStatus.DECLINED);
         joinRequestService.save(joinRequest);
@@ -276,7 +266,7 @@ public class GroupServiceImpl implements GroupService {
     public void leave(Long groupId, Principal connectedUser) {
         UserGroup userGroup = userGroupService.findByUserHandleAndGroupId(connectedUser.getName(), groupId);
         if (userGroup.getRole() == UserGroupRole.LEADER) {
-            throw new XJudgeException("Leader cannot leave the group", GroupServiceImpl.class.getName(), HttpStatus.FORBIDDEN);
+            throw new XJudgeException("Leader cannot leave the group", HttpStatus.FORBIDDEN);
         }
         userGroupService.delete(userGroup);
     }
@@ -284,7 +274,7 @@ public class GroupServiceImpl implements GroupService {
     @Override
     public List<GroupContestModel> getGroupContests(Long groupId) {
         List<GroupContestModel> contests = groupRepository.findById(groupId).orElseThrow(
-                () -> new XJudgeException("Group not found", GroupServiceImpl.class.getName(), HttpStatus.NOT_FOUND))
+                () -> new NoSuchElementException("Group not found"))
                 .getGroupContests()
                 .stream()
                 .map(groupMapper::toGroupContestModel)
@@ -317,34 +307,29 @@ public class GroupServiceImpl implements GroupService {
         return !isPublic(group);
     }
 
+    private void getDataAndSetInvitationStatus(Long invitationId, String userHandle, InvitationStatus status) {
+        Invitation invitation = invitationService.findById(invitationId);
+        User user = userService.findUserByHandle(userHandle);
+        if (!invitation.getReceiver().equals(user)) {
+            throw new XJudgeException("User is not the receiver of the invitation", HttpStatus.FORBIDDEN);
+        }
+        if (invitation.getStatus() != InvitationStatus.PENDING) {
+            throw new XJudgeException("Invitation is not pending", HttpStatus.FORBIDDEN);
+        }
+        invitation.setStatus(status);
+        invitationService.save(invitation);
+        if (InvitationStatus.ACCEPTED.equals(status)) join(groupMapper.toModel(invitation.getGroup()), user);
+    }
+
     @Override
     @Transactional
     public void acceptInvitation(Long invitationId, Principal connectedUser) {
-        Invitation invitation = invitationService.findById(invitationId);
-        User user = userService.findUserByHandle(connectedUser.getName());
-        if (!invitation.getReceiver().equals(user)) {
-            throw new XJudgeException("User is not the receiver of the invitation", GroupServiceImpl.class.getName(), HttpStatus.FORBIDDEN);
-        }
-        if (invitation.getStatus() != InvitationStatus.PENDING) {
-            throw new XJudgeException("Invitation is not pending", GroupServiceImpl.class.getName(), HttpStatus.FORBIDDEN);
-        }
-        invitation.setStatus(InvitationStatus.ACCEPTED);
-        invitationService.save(invitation);
-        join(groupMapper.toModel(invitation.getGroup()), user);
+        getDataAndSetInvitationStatus(invitationId, connectedUser.getName(), InvitationStatus.ACCEPTED);
     }
 
     @Override
     public void declineInvitation(Long invitationId, Principal connectedUser) {
-        Invitation invitation = invitationService.findById(invitationId);
-        User user = userService.findUserByHandle(connectedUser.getName());
-        if (!invitation.getReceiver().equals(user)) {
-            throw new XJudgeException("User is not the receiver of the invitation", GroupServiceImpl.class.getName(), HttpStatus.FORBIDDEN);
-        }
-        if (invitation.getStatus() != InvitationStatus.PENDING) {
-            throw new XJudgeException("Invitation is not pending", GroupServiceImpl.class.getName(), HttpStatus.FORBIDDEN);
-        }
-        invitation.setStatus(InvitationStatus.DECLINED);
-        invitationService.save(invitation);
+        getDataAndSetInvitationStatus(invitationId, connectedUser.getName(), InvitationStatus.DECLINED);
     }
     @Override
     public Page<Group> searchGroupByName(String name, Pageable pageable) {

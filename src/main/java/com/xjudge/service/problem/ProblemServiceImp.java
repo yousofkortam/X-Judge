@@ -4,7 +4,6 @@ import com.xjudge.entity.Compiler;
 import com.xjudge.entity.Problem;
 import com.xjudge.entity.Submission;
 import com.xjudge.entity.User;
-import com.xjudge.exception.XJudgeException;
 import com.xjudge.mapper.ProblemMapper;
 import com.xjudge.mapper.SubmissionMapper;
 import com.xjudge.model.enums.OnlineJudgeType;
@@ -23,7 +22,6 @@ import com.xjudge.service.user.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +30,7 @@ import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
@@ -83,17 +82,18 @@ public class ProblemServiceImp implements ProblemService {
     public ProblemDescription getProblemDescription(String source, String code) {
         Problem problem = problemRepo.findByCodeAndOnlineJudge(code, OnlineJudgeType.valueOf(source.toLowerCase()))
                 .orElseThrow(
-                        () -> new XJudgeException("Problem not found", ProblemServiceImp.class.getName(), HttpStatus.NOT_FOUND)
+                        () -> new NoSuchElementException("Problem not found")
                 );
         return problemMapper.toDescription(problem);
     }
 
     @Override
+    @Transactional
     public Submission submit(SubmissionInfoModel info , Authentication authentication) {
         User user = userService.findUserByHandle(authentication.getName());
         Problem problem = getProblem(info.ojType().name(), info.code());
         Compiler compiler = compilerService.getCompilerByIdValue(info.compiler().getIdValue());
-        Submission submission = setSubmissionData(info , problem , user , compiler);;
+        Submission submission = setSubmissionData(info , problem , user , compiler);
         submissionService.save(submission);
         SubmissionStrategy strategy = submissionStrategies.get(info.ojType());
         Submission updatedSubmission = strategy.submit(info);

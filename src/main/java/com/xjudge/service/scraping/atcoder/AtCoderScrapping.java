@@ -1,7 +1,6 @@
 package com.xjudge.service.scraping.atcoder;
 
 import com.xjudge.entity.*;
-import com.xjudge.exception.XJudgeException;
 import com.xjudge.model.enums.OnlineJudgeType;
 import com.xjudge.repository.PropertyRepository;
 import com.xjudge.repository.SectionRepository;
@@ -13,7 +12,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -39,7 +37,7 @@ public class AtCoderScrapping implements ScrappingStrategy {
             connection = Jsoup.connect(targetProblem);
             problemDocument = connection.get();
         }catch (Exception e){
-            throw new XJudgeException("Problem not found", AtCoderScrapping.class.getName(), HttpStatus.NOT_FOUND);
+            throw new NoSuchElementException("Problem not found");
         }
 
         String problemTitle = problemDocument.select(".col-sm-12 .h2").getFirst().ownText().substring(4);

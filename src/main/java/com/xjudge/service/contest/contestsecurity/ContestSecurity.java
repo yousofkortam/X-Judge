@@ -8,7 +8,6 @@ import com.xjudge.mapper.UserMapper;
 import com.xjudge.model.enums.ContestType;
 import com.xjudge.model.enums.ContestVisibility;
 import com.xjudge.repository.ContestRepo;
-import com.xjudge.repository.UserContestRepo;
 import com.xjudge.service.contest.ContestService;
 import com.xjudge.service.group.groupSecurity.GroupSecurity;
 import com.xjudge.service.user.UserService;
@@ -27,20 +26,23 @@ public class ContestSecurity {
     private final UserService userService;
     private final UserMapper userMapper;
     private final ContestRepo contestRepo;
-    private final UserContestRepo userContestRepo;
 
 
     public boolean authorizeCreateContest(String handle , Long groupId , ContestType type){
         if(type == ContestType.GROUP){
-            return isUserAuthorizedInGroup(handle , groupId);
+            boolean isAuthorizedUser = isUserAuthorizedInGroup(handle , groupId);
+            if(!isAuthorizedUser){
+                throw new XJudgeException("UnAuthorized user", HttpStatus.FORBIDDEN);
+            }
+            return true;
         }
         return true;
     }
 
     public boolean authorizeContestantsRoles(String handle, Long id , String password){
         Contest contest = contestService.getContest(id);
-        if(!isContestOwner(contest, handle)
-                &&!isContestParticipant(contest , handle)
+        if(isContestOwner(contest, handle)
+                && !isContestParticipant(contest , handle)
                 && contest.getType() == ContestType.CLASSIC
                 && contest.getVisibility() == ContestVisibility.PRIVATE){
 
@@ -61,11 +63,15 @@ public class ContestSecurity {
         Contest contest = contestService.getContest(contestId);
         if(contest.getType() == ContestType.GROUP){
             Group group = contest.getGroup();
-            return isUserAuthorizedInGroup(handle , group.getId());
+            boolean isAuthorizedUser = isUserAuthorizedInGroup(handle , group.getId());
+            if(!isAuthorizedUser){
+                throw new XJudgeException("UnAuthorized user", HttpStatus.FORBIDDEN);
+            }
+            return true;
         }
         else if(contest.getType() == ContestType.CLASSIC){
-             if(!isContestOwner(contest, handle)){
-                 throw new XJudgeException("UnAuthorized owner" , ContestSecurity.class.getName() , HttpStatus.FORBIDDEN);
+             if(isContestOwner(contest, handle)){
+                 throw new XJudgeException("UnAuthorized owner", HttpStatus.FORBIDDEN);
              }
         }
         return true;
@@ -75,16 +81,16 @@ public class ContestSecurity {
         Contest contest = contestService.getContest(contestId);
         if(contestType == ContestType.GROUP){
             if(contest.getType() == ContestType.CLASSIC){
-                if(!isContestOwner(contest, handle)){
-                    throw new XJudgeException("UnAuthorized owner" , ContestSecurity.class.getName() , HttpStatus.FORBIDDEN);
+                if(isContestOwner(contest, handle)){
+                    throw new XJudgeException("UnAuthorized owner", HttpStatus.FORBIDDEN);
                 }
                 return isUserAuthorizedInGroup(handle , groupId);
             }
             return isUserAuthorizedInGroup(handle , groupId) &&  isUserAuthorizedInGroup(handle , contest.getGroup().getId());
         }
         else if(contestType == ContestType.CLASSIC){
-            if(!isContestOwner(contest, handle)){
-                throw new XJudgeException("UnAuthorized owner" , ContestSecurity.class.getName() , HttpStatus.FORBIDDEN);
+            if(isContestOwner(contest, handle)){
+                throw new XJudgeException("UnAuthorized owner", HttpStatus.FORBIDDEN);
             }
         }
         return true;
@@ -92,7 +98,7 @@ public class ContestSecurity {
 
     private boolean isPasswordCorrect(String contestPassword , String requestPassword){
         if(!contestPassword.equals(requestPassword)){
-            throw new XJudgeException("Password is not correct" , ContestSecurity.class.getName() , HttpStatus.FORBIDDEN);
+            throw new XJudgeException("Password is not correct", HttpStatus.FORBIDDEN);
         }
         return true;
     }
@@ -100,7 +106,7 @@ public class ContestSecurity {
     private boolean isContestOwner(Contest contest , String handle){
         return contest.getUsers()
                 .stream()
-                .anyMatch(userContest -> userContest.getUser().getHandle().equals(handle)
+                .noneMatch(userContest -> userContest.getUser().getHandle().equals(handle)
                         && userContest.getIsOwner());
     }
 

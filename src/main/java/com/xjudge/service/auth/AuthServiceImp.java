@@ -3,14 +3,13 @@ package com.xjudge.service.auth;
 import com.xjudge.entity.Token;
 import com.xjudge.entity.User;
 
+import com.xjudge.exception.XJudgeException;
 import com.xjudge.mapper.UserMapper;
 import com.xjudge.model.enums.TokenType;
 import com.xjudge.model.enums.UserRole;
-import com.xjudge.exception.auth.AuthException;
 import com.xjudge.model.auth.*;
 
 import com.xjudge.config.security.JwtService;
-import com.xjudge.model.user.UserModel;
 import com.xjudge.service.email.EmailService;
 import com.xjudge.service.token.TokenService;
 import com.xjudge.service.user.UserService;
@@ -20,19 +19,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -49,22 +45,16 @@ public class AuthServiceImp implements AuthService{
 
     @Override
     @Transactional
-    public AuthResponse register(RegisterRequest registerRequest, BindingResult bindingResult) {
-
-        Map<String, String> errors = checkErrors(bindingResult);
+    public AuthResponse register(RegisterRequest registerRequest) {
 
         // Check if user with the same handle exists
         if (userService.existsByHandle(registerRequest.getUserHandle())) {
-            errors.put("userHandle" , "User with this handle already exists");
+            throw new IllegalArgumentException("User with this handle already exists");
         }
 
         // Check if user with the same email exists
         if (userService.existsByEmail(registerRequest.getUserEmail())) {
-            errors.put("userEmail" , "User with this email already exists");
-        }
-
-        if (!errors.isEmpty()) {
-            throw new AuthException("Registration failed" , HttpStatus.BAD_REQUEST, errors);
+            throw new IllegalArgumentException("User with this email already exists");
         }
 
         User userDetails = User.builder()
@@ -118,28 +108,16 @@ public class AuthServiceImp implements AuthService{
     }
 
     @Override
-    public LoginResponse authenticate(LoginRequest loginRequest, BindingResult bindingResult) {
-
-        Map<String, String> errors = checkErrors(bindingResult);
-
-        if (!errors.isEmpty()) {
-            throw new AuthException("Authentication failed" , HttpStatus.BAD_REQUEST, errors);
-        }
-
+    public LoginResponse authenticate(LoginRequest loginRequest) {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUserHandle() , loginRequest.getUserPassword())
             );
         } catch (AuthenticationException e) {
-            throw new AuthException("Username or password is incorrect" , HttpStatus.UNAUTHORIZED, errors);
+            throw new UsernameNotFoundException("Username or password is incorrect");
         }
 
-        UserModel model = userService.findUserModelByHandle(loginRequest.getUserHandle());
-        System.out.println(model);
-        User user = userMapper.toEntity(model);
-        System.out.println(user);
-
-        String token = jwtService.generateToken(user);
+        String token = jwtService.generateToken(loginRequest.getUserHandle());
         return LoginResponse
                 .builder()
                 .statusCode(HttpStatus.OK.value())
@@ -188,15 +166,15 @@ public class AuthServiceImp implements AuthService{
         User user = userMapper.toEntity(userService.findUserModelByHandle(connectedUser.getName()));
 
         if (!passwordEncoder.matches(changePasswordRequest.getOldPassword(), user.getPassword())) {
-            throw new AuthException("Old password is incorrect", HttpStatus.BAD_REQUEST, new HashMap<>());
+            throw new IllegalArgumentException("Old password is incorrect");
         }
 
         if (!changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {
-            throw new AuthException("Passwords do not match", HttpStatus.BAD_REQUEST, new HashMap<>());
+            throw new IllegalArgumentException("Passwords do not match");
         }
 
         if (changePasswordRequest.getOldPassword().equals(changePasswordRequest.getNewPassword())) {
-            throw new AuthException("New password cannot be the same as old password", HttpStatus.BAD_REQUEST, new HashMap<>());
+            throw new IllegalArgumentException("New password cannot be the same as old password");
         }
 
         user.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
@@ -251,21 +229,21 @@ public class AuthServiceImp implements AuthService{
         Token passwordResetToken = tokenService.findByToken(resetPasswordRequest.getToken());
 
         if (passwordResetToken.getTokenType() != TokenType.PASSWORD_RESET) {
-            throw new AuthException("Invalid token", HttpStatus.BAD_REQUEST, new HashMap<>());
+            throw new IllegalArgumentException("Invalid token");
         }
 
         if (passwordResetToken.getVerifiedAt() != null) {
-            throw new AuthException("Token already used", HttpStatus.BAD_REQUEST, new HashMap<>());
+            throw new IllegalArgumentException("Token already verified");
         }
 
         if (passwordResetToken.getExpiredAt().isBefore(LocalDateTime.now())) {
-            throw new AuthException("Token expired", HttpStatus.BAD_REQUEST, new HashMap<>());
+            throw new IllegalArgumentException("Token expired");
         }
 
         User user = passwordResetToken.getUser();
 
         if (!resetPasswordRequest.getPassword().equals(resetPasswordRequest.getConfirmPassword())) {
-            throw new AuthException("Passwords do not match", HttpStatus.BAD_REQUEST, new HashMap<>());
+            throw new IllegalArgumentException("Passwords do not match");
         }
 
         user.setPassword(passwordEncoder.encode(resetPasswordRequest.getPassword()));
@@ -281,21 +259,11 @@ public class AuthServiceImp implements AuthService{
                 .build();
     }
 
-    private Map<String, String> checkErrors(BindingResult bindingResult) {
-        Map<String, String> errors = new HashMap<>();
-        if (bindingResult.hasErrors()) {
-            for (FieldError error : bindingResult.getFieldErrors()) {
-                errors.put(error.getField(), error.getDefaultMessage());
-            }
-        }
-        return errors;
-    }
-
     private void redirectToLoginPage(HttpServletResponse response) {
         try {
             response.sendRedirect("http://localhost:4200/login");
         } catch (IOException e) {
-            throw new AuthException("Redirect failed", HttpStatus.INTERNAL_SERVER_ERROR, new HashMap<>());
+            throw new XJudgeException("Redirect failed", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

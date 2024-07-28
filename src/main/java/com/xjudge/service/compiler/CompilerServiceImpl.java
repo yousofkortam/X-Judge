@@ -22,7 +22,7 @@ public class CompilerServiceImpl implements CompilerService{
         try {
             ojType = OnlineJudgeType.valueOf(onlineJudge.toLowerCase());
         } catch (Exception e) {
-            throw new XJudgeException("Invalid Online Judge Type", CompilerServiceImpl.class.getName(), HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("Invalid Online Judge Type", HttpStatus.BAD_REQUEST);
         }
 
         return compilerRepo.findByOnlineJudgeType(ojType);
@@ -31,7 +31,7 @@ public class CompilerServiceImpl implements CompilerService{
     @Override
     public Compiler getCompilerByIdValue(String idValue) {
         return compilerRepo.findCompilerByIdValue(idValue)
-                .orElseThrow(() -> new XJudgeException("Invalid Compiler Id!" , CompilerService.class.getName() , HttpStatus.BAD_REQUEST));
+                .orElseThrow(() -> new XJudgeException("Invalid Compiler Id!", HttpStatus.BAD_REQUEST));
     }
 
 

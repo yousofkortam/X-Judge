@@ -1,15 +1,14 @@
 package com.xjudge.controller.group;
 
 import com.xjudge.entity.Group;
-import com.xjudge.exception.XJudgeValidationException;
 import com.xjudge.model.group.GroupContestModel;
 import com.xjudge.model.group.GroupMemberModel;
 import com.xjudge.model.group.GroupModel;
 import com.xjudge.model.group.GroupRequest;
 import com.xjudge.model.invitation.InvitationRequest;
-import com.xjudge.model.response.Response;
 import com.xjudge.service.group.GroupService;
 import com.xjudge.service.group.userGroupService.UserGroupService;
+import com.xjudge.util.Authentication;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -19,13 +18,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/group")
@@ -35,236 +31,152 @@ public class GroupController {
 
     private final GroupService groupService;
     private final UserGroupService userGroupService;
+
     @GetMapping("/public")
-    public ResponseEntity<?> getAllGroups( Principal connectedUser,@RequestParam(defaultValue = "0") Integer pageNo,
+    public ResponseEntity<Page<GroupModel>> getAllGroups(Principal connectedUser, @RequestParam(defaultValue = "0") Integer pageNo,
                                                 @RequestParam(defaultValue = "25") Integer size) {
         Pageable paging = PageRequest.of(pageNo, size);
-        Page<GroupModel> paginatedData = groupService.getAllPublicGroups(connectedUser,paging);
+        Page<GroupModel> paginatedData = groupService.getAllPublicGroups(connectedUser, paging);
 
-        Response response = Response.builder()
-                .success(true)
-                .data(paginatedData)
-                .message("Groups fetched successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 
     @GetMapping("/userHandle")
-    public ResponseEntity<?> getGroupsByUserHandle(
+    public ResponseEntity<Page<GroupModel>> getGroupsByUserHandle(
             Principal connectedUser,
             @RequestParam(defaultValue = "0") Integer pageNo,
             @RequestParam(defaultValue = "25") Integer size
     ) {
+        Authentication.checkAuthentication(connectedUser);
         Pageable paging = PageRequest.of(pageNo, size);
-        String userHandle=connectedUser.getName();
-        Page<GroupModel> paginatedData = groupService.getGroupsByUserHandle(connectedUser,userHandle, paging);
-        Response response = Response.builder()
-                .success(true)
-                .data(paginatedData)
-                .message("Groups fetched successfully for user with handle: " + userHandle)
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        String userHandle = connectedUser.getName();
+        Page<GroupModel> paginatedData = groupService.getGroupsByUserHandle(connectedUser, userHandle, paging);
+        return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 
 
     @GetMapping("/{groupId}")
-    public ResponseEntity<?> getGroupById(Principal connectedUser, @PathVariable  Long groupId) {
+    public ResponseEntity<GroupModel> getGroupById(Principal connectedUser, @PathVariable  Long groupId) {
         GroupModel group = groupService.getGroupById(groupId, connectedUser);
-        Response response = Response.builder()
-                .success(true)
-                .data(group)
-                .message("Group fetched successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(group, HttpStatus.OK);
     }
 
     @GetMapping("/owned")
-    public ResponseEntity<?> getGroupsOwnedByUser(Principal connectedUser) {
+    public ResponseEntity<List<GroupModel>> getGroupsOwnedByUser(Principal connectedUser) {
+        Authentication.checkAuthentication(connectedUser);
         List<GroupModel> groups = groupService.getGroupsOwnedByUser(connectedUser);
-        Response response = Response.builder()
-                .success(true)
-                .data(groups)
-                .message("Groups fetched successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(groups, HttpStatus.OK);
     }
 
     @PostMapping
-    public ResponseEntity<?> createGroup(@Valid @RequestBody GroupRequest groupRequest, Principal connectedUser, BindingResult bind) {
-        if (bind.hasErrors()) {
-            Map<String, String> errorMap = new HashMap<>();
-            bind.getFieldErrors().forEach(error -> errorMap.put(error.getField(), error.getDefaultMessage()));
-            throw new XJudgeValidationException(errorMap, "Validation failed", this.getClass().getName(), HttpStatus.BAD_REQUEST);
-        }
-        GroupModel group = groupService.create(groupRequest, connectedUser, bind);
-        Response response = Response.builder()
-                .success(true)
-                .data(group)
-                .message("Group created successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+    public ResponseEntity<GroupModel> createGroup(@Valid @RequestBody GroupRequest groupRequest, Principal connectedUser) {
+        Authentication.checkAuthentication(connectedUser);
+        GroupModel group = groupService.create(groupRequest, connectedUser);
+        return new ResponseEntity<>(group, HttpStatus.OK);
     }
 
     @PutMapping("/{groupId}")
     @PreAuthorize("@groupSecurity.hasAnyRole(principal.username, #groupId, {'LEADER', 'MANAGER'})")
-    public ResponseEntity<?> updateGroup(@PathVariable Long groupId, @Valid @RequestBody GroupRequest groupRequest) {
+    public ResponseEntity<GroupModel> updateGroup(@PathVariable Long groupId, @Valid @RequestBody GroupRequest groupRequest) {
         GroupModel group = groupService.update(groupId, groupRequest);
-        Response response = Response.builder()
-                .success(true)
-                .data(group)
-                .message("Group updated successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(group, HttpStatus.OK);
     }
 
     @DeleteMapping("/{groupId}")
     @PreAuthorize("@groupSecurity.hasRole(principal.username, #groupId, 'LEADER')")
-    public ResponseEntity<?> deleteGroup(@PathVariable Long groupId) {
+    public ResponseEntity<Void> deleteGroup(@PathVariable Long groupId) {
         groupService.delete(groupId);
-        Response response = Response.builder()
-                .success(true)
-                .message("Group with Id " + groupId + " deleted successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/invite")
     @PreAuthorize("@groupSecurity.hasAnyRole(principal.username, #invitationRequest.groupId, {'LEADER','MANAGER'})")
-    public ResponseEntity<?> inviteUserToGroup(@Valid @RequestBody InvitationRequest invitationRequest, Principal connectedUser) {
+    public ResponseEntity<Void> inviteUserToGroup(@Valid @RequestBody InvitationRequest invitationRequest, Principal connectedUser) {
+        Authentication.checkAuthentication(connectedUser);
         groupService.inviteUser(invitationRequest.getGroupId(), invitationRequest.getReceiverHandle(), connectedUser);
-        Response response = Response.builder()
-                .success(true)
-                .message("Invitation sent successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/accept-invitation/{invitationId}")
-    public ResponseEntity<?> acceptInvitation(@PathVariable Long invitationId, Principal connectedUser) {
+    public ResponseEntity<Void> acceptInvitation(@PathVariable Long invitationId, Principal connectedUser) {
+        Authentication.checkAuthentication(connectedUser);
         groupService.acceptInvitation(invitationId, connectedUser);
-        Response response = Response.builder()
-                .success(true)
-                .message("Invitation accepted successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/decline-invitation/{invitationId}")
-    public ResponseEntity<?> declineInvitation(@PathVariable Long invitationId, Principal connectedUser) {
+    public ResponseEntity<Void> declineInvitation(@PathVariable Long invitationId, Principal connectedUser) {
+        Authentication.checkAuthentication(connectedUser);
         groupService.declineInvitation(invitationId, connectedUser);
-        Response response = Response.builder()
-                .success(true)
-                .message("Invitation declined successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/request-join/{groupId}")
-    public ResponseEntity<?> requestJoin(@PathVariable Long groupId, Principal connectedUser) {
+    public ResponseEntity<Void> requestJoin(@PathVariable Long groupId, Principal connectedUser) {
+        Authentication.checkAuthentication(connectedUser);
         groupService.requestJoin(groupId, connectedUser);
-        Response response = Response.builder()
-                .success(true)
-                .message("Request sent successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/accept-request/{requestId}")
     @PreAuthorize("@groupSecurity.hasAnyRole(principal.username, #requestId, {'LEADER','MANAGER'})")
-    public ResponseEntity<?> acceptRequest(@PathVariable Long requestId) {
+    public ResponseEntity<Void> acceptRequest(@PathVariable Long requestId) {
         groupService.acceptRequest(requestId);
-        Response response = Response.builder()
-                .success(true)
-                .message("Request accepted successfully.")
-                .build();
-        return ResponseEntity.ok(response);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/decline-request/{requestId}")
     @PreAuthorize("@groupSecurity.hasAnyRole(principal.username, #requestId, {'LEADER','MANAGER'})")
-    public ResponseEntity<?> declineRequest(@PathVariable Long requestId) {
+    public ResponseEntity<Void> declineRequest(@PathVariable Long requestId) {
         groupService.declineRequest(requestId);
-        Response response = Response.builder()
-                .success(true)
-                .message("Request declined successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/{groupId}/join") // request private group join
-    public ResponseEntity<?> joinUserGroup(@PathVariable Long groupId, Principal connectedUser) {
+    public ResponseEntity<Void> joinUserGroup(@PathVariable Long groupId, Principal connectedUser) {
+        Authentication.checkAuthentication(connectedUser);
         groupService.join(groupId, connectedUser);
-        Response response = Response.builder()
-                .success(true)
-                .message("User joined successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/{groupId}/leave") // security handled in user group service layer ✅
-    public ResponseEntity<?> leaveUserGroup(@PathVariable Long groupId, Principal connectedUser) {
+    public ResponseEntity<Void> leaveUserGroup(@PathVariable Long groupId, Principal connectedUser) {
+        Authentication.checkAuthentication(connectedUser);
         groupService.leave(groupId, connectedUser);
-        Response response = Response.builder()
-                .success(true)
-                .message("User left successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @GetMapping("/{groupId}/contests")
-    @PreAuthorize("@groupSecurity.isPublicOrMember(principal.username, #groupId)")
-    public ResponseEntity<?> getGroupContests(@PathVariable Long groupId) {
-
+    @PreAuthorize("@groupSecurity.isPublic(#groupId)")
+    public ResponseEntity<List<GroupContestModel>> getGroupContests(@PathVariable Long groupId) {
         List<GroupContestModel> groupContests = groupService.getGroupContests(groupId);
-
-        Response response = Response.builder()
-                .success(true)
-                .data(groupContests)
-                .message("Group contests fetched successfully.")
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(groupContests, HttpStatus.OK);
     }
 
     @GetMapping("/{groupId}/members")
-    @PreAuthorize("@groupSecurity.isPublicOrMember(principal.username, #groupId)")
-    public ResponseEntity<?> getGroupMembers(
+    public ResponseEntity<Page<GroupMemberModel>> getGroupMembers(
             @PathVariable Long groupId,
             @RequestParam(defaultValue = "0") Integer pageNo,
             @RequestParam(defaultValue = "15") Integer size) {
-
         Pageable paging = PageRequest.of(pageNo, size);
         Page<GroupMemberModel> groupMembers = groupService.getGroupMembers(groupId, paging);
-
-        Response response = Response.builder()
-                .success(true)
-                .data(groupMembers)
-                .message("Group members fetched successfully.")
-                .build();
-
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(groupMembers, HttpStatus.OK);
     }
 
     @GetMapping("/userRole/{groupId}")
    public String getUserRole(Principal connectedUser, @PathVariable Long groupId){
+        Authentication.checkAuthentication(connectedUser);
         return userGroupService.findRoleByUserAndGroupId(connectedUser,groupId);
    }
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchByName(
+    public ResponseEntity<Page<Group>> searchByName(
             @RequestParam(defaultValue = "", required = false) String name,
             @RequestParam(defaultValue = "0") Integer pageNo,
             @RequestParam(defaultValue = "25") Integer size) {
-
         Pageable paging = PageRequest.of(pageNo, size);
         Page<Group> paginatedData = groupService.searchGroupByName(name, paging);
-
-        Response response = Response.builder()
-                .success(true)
-                .data(paginatedData)
-                .message("Groups fetched successfully.")
-                .build();
-
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 
 }

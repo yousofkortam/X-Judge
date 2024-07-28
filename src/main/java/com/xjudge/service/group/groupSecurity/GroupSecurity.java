@@ -24,7 +24,7 @@ public class GroupSecurity {
     public boolean hasRole(String handle, Long groupId, String role) {
         UserGroup userGroup = userGroupService.findByUserHandleAndGroupId(handle, groupId);
         if(!userGroup.getRole().name().equals(role)){
-            throw new XJudgeException("User unauthorized" , GroupSecurity.class.getName() , HttpStatus.UNAUTHORIZED);
+            throw new XJudgeException("User unauthorized", HttpStatus.UNAUTHORIZED);
         }
         return true;
     }
@@ -39,6 +39,10 @@ public class GroupSecurity {
     }
 
     public boolean isPublic(Long groupId) {
-        return groupService.getSpecificGroup(groupId).getVisibility().name().equals("PUBLIC");
+        boolean isPublic = groupService.getSpecificGroup(groupId).getVisibility().name().equals("PUBLIC");
+        if (!isPublic) {
+            throw new XJudgeException("Group is private", HttpStatus.UNAUTHORIZED);
+        }
+        return true;
     }
 }
