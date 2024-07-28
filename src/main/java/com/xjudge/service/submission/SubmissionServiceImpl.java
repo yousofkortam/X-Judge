@@ -1,6 +1,6 @@
 package com.xjudge.service.submission;
 
-import com.xjudge.entity.Compiler;
+import com.xjudge.entity.Contest;
 import com.xjudge.entity.Problem;
 import com.xjudge.entity.Submission;
 import com.xjudge.entity.User;
@@ -11,23 +11,19 @@ import com.xjudge.model.enums.OnlineJudgeType;
 import com.xjudge.model.submission.SubmissionInfoModel;
 import com.xjudge.model.submission.SubmissionModel;
 import com.xjudge.model.submission.SubmissionPageModel;
-import com.xjudge.repository.ContestRepo;
 import com.xjudge.repository.SubmissionRepo;
 import com.xjudge.service.contest.contestproblem.ContestProblemService;
-import com.xjudge.service.problem.ProblemService;
 import com.xjudge.service.scraping.strategy.SubmissionStrategy;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 @Service
 public class SubmissionServiceImpl implements SubmissionService {
@@ -39,7 +35,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
 
     @Autowired
-    public SubmissionServiceImpl(SubmissionRepo submissionRepo, SubmissionMapper submissionMapper, ContestProblemService contestProblemService, Map<OnlineJudgeType, SubmissionStrategy> submissionStrategies, ContestRepo contestRepo) {
+    public SubmissionServiceImpl(SubmissionRepo submissionRepo, SubmissionMapper submissionMapper, ContestProblemService contestProblemService, Map<OnlineJudgeType, SubmissionStrategy> submissionStrategies) {
         this.submissionRepo = submissionRepo;
         this.submissionMapper = submissionMapper;
         this.contestProblemService = contestProblemService;
@@ -48,7 +44,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Override
     public SubmissionModel getSubmissionById(Long submissionId , Authentication authentication) {
-        Submission submission = submissionRepo.findById(submissionId).orElseThrow(() -> new XJudgeException("Submission not found." , SubmissionServiceImpl.class.getName() , HttpStatus.NOT_FOUND));
+        Submission submission = submissionRepo.findById(submissionId).orElseThrow(() -> new NoSuchElementException("Submission not found."));
         if(submission.getSubmissionStatus().equalsIgnoreCase("submitted")) {
           return determineSubmissionModel(submission , authentication);
         }
@@ -75,9 +71,13 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Override
     public boolean updateSubmissionOpen(Long submissionId , Authentication authentication) {
         Submission submission = submissionRepo.findById(submissionId)
-                .orElseThrow(() -> new XJudgeException("Submission not found." , SubmissionServiceImpl.class.getName() , HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new NoSuchElementException("Submission not found."));
+        Contest contest = submission.getContest();
+        if (contest != null && !contest.isEnded()) {
+            return false;
+        }
         if(!isUserSubmission(submission.getUser() , authentication.getName())){
-            throw new XJudgeException("Un Authenticated User" , SubmissionServiceImpl.class.getName() , HttpStatus.FORBIDDEN);
+            throw new XJudgeException("Un Authenticated User", HttpStatus.FORBIDDEN);
         }
         submission.setIsOpen(!submission.getIsOpen());
         submissionRepo.save(submission);

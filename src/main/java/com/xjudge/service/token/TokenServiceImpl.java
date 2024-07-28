@@ -1,12 +1,11 @@
 package com.xjudge.service.token;
 
 import com.xjudge.entity.Token;
-import com.xjudge.exception.XJudgeException;
 import com.xjudge.repository.TokenRepository;
-import com.xjudge.service.group.GroupServiceImpl;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +21,7 @@ public class TokenServiceImpl implements TokenService {
     @Override
     public Token findByToken(String token) {
         return tokenRepository.findByToken(token).orElseThrow(
-                () -> new XJudgeException("Invalid token", GroupServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new NoSuchElementException("Invalid token")
         );
     }
 }

@@ -50,7 +50,7 @@ public interface ContestMapper {
 
     default java.lang.String passwordValidation(ContestClientRequest contestModel) {
         if (contestModel.getVisibility() == ContestVisibility.PRIVATE && (contestModel.getPassword() == null || contestModel.getPassword().isEmpty())) {
-            throw new XJudgeException("Password is REQUIRED when creating a private contest", ContestMapper.class.getName(), HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("Password is REQUIRED when creating a private contest", HttpStatus.BAD_REQUEST);
         } else if (contestModel.getVisibility() == ContestVisibility.PUBLIC) {
             return null;
         }

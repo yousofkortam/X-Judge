@@ -1,6 +1,5 @@
 package com.xjudge.config.security;
 
-import com.xjudge.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -26,15 +25,15 @@ public class JwtService {
         return extractClaim(token , Claims::getSubject);
     }
 
-    public String generateToken(User userDetails){
-        return generateToken(new HashMap<>() , userDetails);
+    public String generateToken(String handle){
+        return generateToken(new HashMap<>() , handle);
     }
 
-    public String generateToken(Map<String , Object> extraClaims , User userDetails){
+    public String generateToken(Map<String , Object> extraClaims , String handle){
         return Jwts
                 .builder()
                 .setClaims(extraClaims) // add claims
-                .setSubject(userDetails.getUsername())
+                .setSubject(handle)
                 .setIssuedAt(new Date(System.currentTimeMillis())) // create time
                 .setExpiration(new Date(System.currentTimeMillis() * 1000 * 60 * 24)) // expiration time
                 .signWith(getSingingKey() , SignatureAlgorithm.HS256) // sign key to create signature

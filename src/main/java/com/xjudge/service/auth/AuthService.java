@@ -9,8 +9,8 @@ import java.security.Principal;
 
 public interface AuthService {
 
-    AuthResponse register(RegisterRequest registerRequest, BindingResult bindingResult);
-    LoginResponse authenticate(LoginRequest loginRequest, BindingResult bindingResult);
+    AuthResponse register(RegisterRequest registerRequest);
+    LoginResponse authenticate(LoginRequest loginRequest);
     String verifyRegistrationToken(String token, HttpServletResponse response, RedirectAttributes redirectAttributes);
     AuthResponse changePassword(ChangePasswordRequest changePasswordRequest, Principal connectedUser);
     AuthResponse forgotPassword(ForgotPasswordRequest forgotPasswordRequest);

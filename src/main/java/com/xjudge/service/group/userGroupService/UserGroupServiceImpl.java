@@ -6,7 +6,6 @@ import com.xjudge.entity.UserGroup;
 import com.xjudge.exception.XJudgeException;
 import com.xjudge.model.enums.UserGroupRole;
 import com.xjudge.repository.UserGroupRepository;
-import com.xjudge.service.group.GroupServiceImpl;
 import com.xjudge.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,7 +28,7 @@ public class UserGroupServiceImpl implements UserGroupService {
     @Override
     public UserGroup findByUserHandleAndGroupId(String userHandle, Long groupId) {
         return userGroupRepository.findByUserHandleAndGroupId(userHandle, groupId).orElseThrow(
-                () -> new XJudgeException("User not found in group.", GroupServiceImpl.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new XJudgeException("User not found in group.", HttpStatus.NOT_FOUND)
         );
     }
 

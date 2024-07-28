@@ -34,6 +34,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import java.security.Principal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -81,7 +82,7 @@ public class ContestServiceImp implements ContestService {
             if(!ContestStatus.SCHEDULED.name().equalsIgnoreCase(status)  &&
                     !ContestStatus.ENDED.name().equalsIgnoreCase(status) &&
                     !ContestStatus.RUNNING.name().equalsIgnoreCase(status)){
-                throw new XJudgeException("Invalid Status :" + status + " bad request" , ContestServiceImp.class.getName() , HttpStatus.BAD_REQUEST);
+                throw new XJudgeException("Invalid Status :" + status + " bad request", HttpStatus.BAD_REQUEST);
             }
             return getPage(contestRepo.searchByVisibilityOrTypeOrUserAndOwnerAndTitle(category , owner , title) , status , pageable);
         }
@@ -96,7 +97,7 @@ public class ContestServiceImp implements ContestService {
         if(!ContestStatus.SCHEDULED.name().equals(status)  &&
                 !ContestStatus.ENDED.name().equals(status) &&
                 !ContestStatus.RUNNING.name().equals(status)){
-            throw new XJudgeException("Invalid Status :" + status + " bad request" , ContestServiceImp.class.getName() , HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("Invalid Status :" + status + " bad request", HttpStatus.BAD_REQUEST);
         }
         return getPage(contestRepo.findAll() , status , PageRequest.of(pageNumber, pageSize));
     }
@@ -105,13 +106,13 @@ public class ContestServiceImp implements ContestService {
     public Page<ContestPageModel> getContestsByType(String type, String contestStatus, Pageable pageable) {
         if(!ContestType.GROUP.name().equalsIgnoreCase(type) &&
            !ContestType.CLASSIC.name().equalsIgnoreCase(type)){
-            throw new XJudgeException("Invalid type :" + type + " bad request" , ContestServiceImp.class.getName() , HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("Invalid type :" + type + " bad request", HttpStatus.BAD_REQUEST);
         }
         if(!contestStatus.isEmpty()){
             if(!ContestStatus.SCHEDULED.name().equalsIgnoreCase(contestStatus)  &&
                     !ContestStatus.ENDED.name().equalsIgnoreCase(contestStatus) &&
                     !ContestStatus.RUNNING.name().equalsIgnoreCase(contestStatus)){
-                throw new XJudgeException("Invalid Status :" + contestStatus + " bad request" , ContestServiceImp.class.getName() , HttpStatus.BAD_REQUEST);
+                throw new XJudgeException("Invalid Status :" + contestStatus + " bad request", HttpStatus.BAD_REQUEST);
             }
             return getPage(contestRepo.findContestsByType(ContestType.valueOf(type.toUpperCase())) , contestStatus , pageable);
         }
@@ -126,7 +127,7 @@ public class ContestServiceImp implements ContestService {
             if(!ContestStatus.SCHEDULED.name().equals(contestStatus)  &&
                     !ContestStatus.ENDED.name().equals(contestStatus) &&
                     !ContestStatus.RUNNING.name().equals(contestStatus)){
-                throw new XJudgeException("Invalid Status :" + contestStatus + " bad request" , ContestServiceImp.class.getName() , HttpStatus.BAD_REQUEST);
+                throw new XJudgeException("Invalid Status :" + contestStatus + " bad request", HttpStatus.BAD_REQUEST);
             }
            return getPage(contestRepo.findContestsByUser(authentication.getName()) , contestStatus , pageable);
         }
@@ -138,13 +139,13 @@ public class ContestServiceImp implements ContestService {
     public Page<ContestPageModel> getContestsByVisibility(String visibility, String contestStatus , Pageable pageable) {
         if(!ContestVisibility.PUBLIC.name().equalsIgnoreCase(visibility) &&
                 !ContestVisibility.PRIVATE.name().equalsIgnoreCase(visibility)){
-            throw new XJudgeException("Invalid visibility :" + visibility + " bad request" , ContestServiceImp.class.getName() , HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("Invalid visibility :" + visibility + " bad request", HttpStatus.BAD_REQUEST);
         }
         if(!contestStatus.isEmpty()){
             if(!ContestStatus.SCHEDULED.name().equalsIgnoreCase(contestStatus)  &&
                     !ContestStatus.ENDED.name().equalsIgnoreCase(contestStatus) &&
                     !ContestStatus.RUNNING.name().equalsIgnoreCase(contestStatus)){
-                throw new XJudgeException("Invalid Status :" + contestStatus + " bad request" , ContestServiceImp.class.getName() , HttpStatus.BAD_REQUEST);
+                throw new XJudgeException("Invalid Status :" + contestStatus + " bad request", HttpStatus.BAD_REQUEST);
             }
            return getPage(contestRepo.findContestsByVisibility(ContestVisibility.valueOf(visibility.toUpperCase())) , contestStatus , pageable);
         }
@@ -156,7 +157,7 @@ public class ContestServiceImp implements ContestService {
     @Override
     public ContestModel createContest(ContestClientRequest creationModel , Authentication authentication) {
         if(authentication.getName() == null) {
-            throw new XJudgeException("un authenticated user" , ContestServiceImp.class.getName() , HttpStatus.UNAUTHORIZED);
+            throw new XJudgeException("un authenticated user", HttpStatus.UNAUTHORIZED);
         }
 
         Contest contest = mappingBasedOnContestType(creationModel);
@@ -176,7 +177,7 @@ public class ContestServiceImp implements ContestService {
     @Override
     public Contest getContest(Long id) {
         return contestRepo.findById(id).orElseThrow(
-                () -> new XJudgeException("There's no contest with this id = " + id, ContestServiceImp.class.getName(), HttpStatus.NOT_FOUND)
+                () -> new XJudgeException("There's no contest with this id = " + id, HttpStatus.NOT_FOUND)
         );
     }
 
@@ -187,11 +188,11 @@ public class ContestServiceImp implements ContestService {
     }
 
     @Override
-    public ContestModel updateContest(Long id, ContestClientRequest updatingModel , Authentication authentication) {
+    public ContestModel updateContest(Long id, ContestClientRequest updatingModel , Principal authentication) {
         Optional<Contest> contestOptional = contestRepo.findById(id);
 
         if(contestOptional.isEmpty()){
-            throw new XJudgeException("There's no contest with this id = " + id, ContestServiceImp.class.getName(), HttpStatus.NOT_FOUND);
+            throw new XJudgeException("There's no contest with this id = " + id, HttpStatus.NOT_FOUND);
         }
 
         ContestStatus contestStatus = checkContestStatus(contestOptional.get());
@@ -206,7 +207,7 @@ public class ContestServiceImp implements ContestService {
         }
 
         if(authentication.getName() == null) {
-            throw new XJudgeException("un authenticated user" , ContestServiceImp.class.getName() , HttpStatus.UNAUTHORIZED);
+            throw new XJudgeException("un authenticated user", HttpStatus.UNAUTHORIZED);
         }
 
         User user = userService.findUserByHandle(authentication.getName());
@@ -224,7 +225,7 @@ public class ContestServiceImp implements ContestService {
     @Override
     public void deleteContest(Long id) {
         if(!contestRepo.existsById(id)){
-            throw new XJudgeException("There's no contest with this id = " + id, ContestServiceImp.class.getName(), HttpStatus.NOT_FOUND);
+            throw new XJudgeException("There's no contest with this id = " + id, HttpStatus.NOT_FOUND);
         }
         contestRepo.deleteById(id);
     }
@@ -236,7 +237,11 @@ public class ContestServiceImp implements ContestService {
         List<ProblemModel> problems = new ArrayList<>(
                 contest.getProblemSet()
                         .stream()
-                        .map(contestProblem -> problemMapper.toModel(contestProblem.getProblem() , contestProblem.getProblemHashtag()))
+                        .map(contestProblem -> problemMapper.toModel(
+                                contestProblem.getProblem(),
+                                contestProblem.getProblemHashtag()
+                                )
+                        )
                         .toList());
 
         problems.sort(Comparator.comparing(ProblemModel::problemHashtag));
@@ -247,13 +252,13 @@ public class ContestServiceImp implements ContestService {
     @Override
     public ProblemModel getContestProblem(Long id, String problemHashtag) {
         if (!contestProblemRepo.existsByProblemHashtagAndContestId(problemHashtag , id)) {
-            throw new XJudgeException("There's no problem with this hashtag = " + problemHashtag, ContestServiceImp.class.getName(), HttpStatus.NOT_FOUND);
+            throw new XJudgeException("There's no problem with this hashtag = " + problemHashtag, HttpStatus.NOT_FOUND);
         }
 
         ContestProblem contestProblem =  contestProblemRepo.findContestProblemByProblemHashtagAndContestId(problemHashtag , id);
 
         return problemMapper.toModel(
-               contestProblem.getProblem(),
+                contestProblem.getProblem(),
                 problemHashtag,
                 contestProblem.getProblemAlias()
         );
@@ -268,15 +273,15 @@ public class ContestServiceImp implements ContestService {
         ContestProblem contestProblem = getContestProblemByCode(contest , info.code());
 
         if(contestStatus == ContestStatus.SCHEDULED){
-            throw new XJudgeException("The contest has not started yet" , ContestServiceImp.class.getName() , HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("The contest has not started yet", HttpStatus.BAD_REQUEST);
         }
 
-        if(contestStatus == ContestStatus.ENDED){
+        if(contestStatus == ContestStatus.ENDED) {
             return submissionMapper.toModel(problemService.submit(info , authentication));
         }
 
         if(!contestProblemRepo.existsByProblemCodeAndContestId(info.code() , id)){
-            throw new XJudgeException("No such problem with this code in contest" , ContestServiceImp.class.getName() , HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("No such problem with this code in contest", HttpStatus.BAD_REQUEST);
         }
 
         if(!userContest.getIsParticipant()){
@@ -309,6 +314,7 @@ public class ContestServiceImp implements ContestService {
         contest.getProblemSet().add(contestProblem);
         contest.getUsers().add(userContest);
         submission.setContest(contest);
+        submission.setIsOpen(false);
         submission = submissionService.save(submission);
 
         return submissionMapper.toModel(submission);
@@ -319,7 +325,7 @@ public class ContestServiceImp implements ContestService {
                 .stream()
                 .filter(contestProblem -> contestProblem.getProblemCode().equals(problemCode))
                 .findFirst()
-                .orElseThrow(() -> new XJudgeException("There is no contest problem with this code in contest" , ContestServiceImp.class.getName() , HttpStatus.BAD_REQUEST));
+                .orElseThrow(() -> new XJudgeException("There is no contest problem with this code in contest", HttpStatus.BAD_REQUEST));
     }
 
     @Override
@@ -358,13 +364,13 @@ public class ContestServiceImp implements ContestService {
                 .stream()
                 .filter(contestProblem -> contestProblem.getProblemCode().equals(problemCode))
                 .findFirst()
-                .orElseThrow(() -> new XJudgeException("PROBLEM_NOT_Found" , ContestServiceImp.class.getName() , HttpStatus.INTERNAL_SERVER_ERROR))
+                .orElseThrow(() -> new XJudgeException("PROBLEM_NOT_Found", HttpStatus.INTERNAL_SERVER_ERROR))
                 .getProblemHashtag();
     }
 
     private void handleContestProblemSetRelation(List<ContestProblemset> problemSet, Contest contest) {
         if(!checkIfProblemHashtagDuplicated(problemSet)){
-            throw new XJudgeException("problemHashtag should not be duplicated" , ContestServiceImp.class.getName(), HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("problemHashtag should not be duplicated", HttpStatus.BAD_REQUEST);
         }
 
         contestProblemRepo.deleteAllByContestId(contest.getId());
@@ -467,7 +473,7 @@ public class ContestServiceImp implements ContestService {
                 .stream()
                 .filter(UserContest::getIsOwner)
                 .findFirst()
-                .orElseThrow(() -> new XJudgeException("Lol contest without owner !!" , ContestServiceImp.class.getName() , HttpStatus.EXPECTATION_FAILED))
+                .orElseThrow(() -> new XJudgeException("Lol contest without owner !!", HttpStatus.EXPECTATION_FAILED))
                 .getUser();
     }
 

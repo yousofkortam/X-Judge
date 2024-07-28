@@ -3,6 +3,7 @@ package com.xjudge.config.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -41,8 +42,7 @@ public class SecurityConfig {
                                         .requestMatchers("/auth/**").permitAll()
                                         .requestMatchers("/group/public", "/group/{id}").permitAll()
                                         .requestMatchers("/swagger-ui/**").permitAll()
-                                        .requestMatchers("/submission/**").permitAll()
-                                        .requestMatchers("/profile/**").permitAll()
+                                        .requestMatchers(HttpMethod.GET).permitAll()
                                         .anyRequest().authenticated()
                                         .and().headers().frameOptions().disable();
                             } catch (Exception e) {

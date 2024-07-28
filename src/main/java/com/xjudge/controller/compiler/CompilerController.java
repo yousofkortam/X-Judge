@@ -1,7 +1,6 @@
 package com.xjudge.controller.compiler;
 
 import com.xjudge.entity.Compiler;
-import com.xjudge.model.response.Response;
 import com.xjudge.service.compiler.CompilerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,11 +25,6 @@ public class CompilerController {
     @Operation(summary = "Get all compilers", description = "Get the available compilers in the system.")
     public ResponseEntity<?> getAllCompilers(@RequestParam String onlineJudge) {
         List<Compiler> compilers = compilerService.getCompilersByOnlineJudgeType(onlineJudge);
-
-        Response response = Response.builder()
-                .success(true)
-                .data(compilers)
-                .build();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(compilers, HttpStatus.OK);
     }
 }

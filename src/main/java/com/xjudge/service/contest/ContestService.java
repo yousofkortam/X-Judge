@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 
+import java.security.Principal;
 import java.util.List;
 
 public interface ContestService {
@@ -38,7 +39,7 @@ public interface ContestService {
 
     ContestModel getContestData(Long id);
 
-    ContestModel updateContest(Long id, ContestClientRequest model , Authentication authentication);
+    ContestModel updateContest(Long id, ContestClientRequest model , Principal authentication);
 
     void deleteContest(Long id);
 

@@ -78,7 +78,7 @@ public class CodeforcesSubmission implements SubmissionStrategy {
         WebElement submissionRow = rows.stream()
                 .filter(row -> row.getText().contains(remoteId))
                 .findFirst()
-                .orElseGet(()->null);
+                .orElse(null);
         return(submissionRow != null)? SubmissionScrapedData
                 .builder()
                 .remoteId(remoteId)
@@ -140,12 +140,12 @@ public class CodeforcesSubmission implements SubmissionStrategy {
         try {
             WebElement webElement = wait.until(ExpectedConditions.visibilityOfElementLocated(By.className("shiftUp")));
             driverPool.releaseDriver(driverWrapper);
-            throw new XJudgeException(webElement.getText(), CodeforcesSubmission.class.getName(), HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new XJudgeException(webElement.getText(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         catch (Exception exception2) {
             logger.info(exception2.getMessage());
             driverPool.releaseDriver(driverWrapper);
-            throw new XJudgeException("Fail to submit !", CodeforcesSubmission.class.getName(), HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new XJudgeException("Fail to submit !", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

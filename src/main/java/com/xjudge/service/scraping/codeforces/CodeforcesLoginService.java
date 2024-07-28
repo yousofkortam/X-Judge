@@ -40,7 +40,7 @@ public class CodeforcesLoginService implements LoginService {
             if(exception instanceof NoSuchElementException || exception instanceof TimeoutException || exception instanceof StaleElementReferenceException){
                 login(driver , USERNAME , PASSWORD);
             }
-            throw new XJudgeException("FAIL TO LOGIN", CodeforcesSubmission.class.getName(), HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new XJudgeException("FAIL TO LOGIN", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

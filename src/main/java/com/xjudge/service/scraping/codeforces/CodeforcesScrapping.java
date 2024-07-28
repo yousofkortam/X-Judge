@@ -1,7 +1,6 @@
 package com.xjudge.service.scraping.codeforces;
 
 import com.xjudge.entity.*;
-import com.xjudge.exception.XJudgeException;
 import com.xjudge.model.enums.OnlineJudgeType;
 import com.xjudge.repository.PropertyRepository;
 import com.xjudge.repository.SectionRepository;
@@ -12,12 +11,12 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -31,9 +30,9 @@ public class CodeforcesScrapping implements ScrappingStrategy {
     @Override
     public Problem scrap(String code) {
         String URL = "https://codeforces.com";
-        String[] splittedCode = codeForcesSplitting.split(code);
-        String contestId = splittedCode[0];
-        String problemId = splittedCode[1];
+        String[] splitCode = codeForcesSplitting.split(code);
+        String contestId = splitCode[0];
+        String problemId = splitCode[1];
         String targetProblem = URL + "/problemset/problem/" + contestId + "/" + problemId;
         String contestLink = URL + "/contest/" + contestId;
         Document problemDocument;
@@ -41,7 +40,7 @@ public class CodeforcesScrapping implements ScrappingStrategy {
         try {
             problemDocument = Jsoup.connect(targetProblem).get();
         } catch (IOException e) {
-            throw new XJudgeException("Problem not found", CodeforcesScrapping.class.getName(), HttpStatus.NOT_FOUND);
+            throw new NoSuchElementException("Problem not found");
         }
 
         Elements htmlSections = problemDocument.select(".problem-statement > div");

@@ -64,4 +64,8 @@ public class Contest extends BaseEntity<Long> {
     @ToString.Exclude
     Set<ContestProblem> problemSet;
 
+    public boolean isEnded() {
+        return Instant.now().isAfter(beginTime.plus(this.duration));
+    }
+
 }

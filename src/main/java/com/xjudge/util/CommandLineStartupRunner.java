@@ -45,7 +45,7 @@ public class CommandLineStartupRunner implements CommandLineRunner {
                 .password(encoder.encode("xjudge"))
                 .firstName("X")
                 .lastName("Judge")
-                .school("MUSIC")
+                .school("MUFIC")
                 .registrationDate(LocalDate.now())
                 .solvedCount(0L)
                 .attemptedCount(0L)

@@ -23,7 +23,6 @@ public class JoinRequestServiceImpl implements JoinRequestService {
         return this.joinRequestRepository.findById(id).orElseThrow(
                 () -> new XJudgeException(
                         "Join request not found",
-                        JoinRequestServiceImpl.class.getName(),
                         HttpStatus.NOT_FOUND)
         );
     }

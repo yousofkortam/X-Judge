@@ -1,7 +1,6 @@
 package com.xjudge.service.scraping.atcoder;
 
 import com.xjudge.exception.XJudgeException;
-import com.xjudge.service.scraping.codeforces.CodeforcesSubmission;
 import com.xjudge.service.scraping.strategy.LoginService;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Cookie;
@@ -37,11 +36,11 @@ public class AtCoderLoginService implements LoginService {
             submitButton.submit();
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.className("alert")));
         }catch (Exception e){
-            throw new XJudgeException("FAIL TO LOGIN", CodeforcesSubmission.class.getName(), HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new XJudgeException("FAIL TO LOGIN", HttpStatus.INTERNAL_SERVER_ERROR);
         }
         WebElement alert = driver.findElement(By.className("alert"));
         if(alert.getText().contains("Contest not found")){
-            throw new XJudgeException("Contest Not Found" , AtCoderSubmission.class.getName() , HttpStatus.BAD_REQUEST);
+            throw new XJudgeException("Contest Not Found", HttpStatus.BAD_REQUEST);
         }
     }
 
