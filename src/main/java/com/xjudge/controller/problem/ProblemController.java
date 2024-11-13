@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import com.xjudge.service.problem.ProblemService;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,10 +33,8 @@ public class ProblemController {
 
     @GetMapping
     @Operation(summary = "Retrieve all problems", description = "Get all problems available in the system with pagination.")
-    public ResponseEntity<Page<ProblemsPageModel>> getAllProblems(@RequestParam(defaultValue = "0") Integer pageNo,
-                                            @RequestParam(defaultValue = "25") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        Page<ProblemsPageModel> paginatedData = problemService.getAllProblems(paging);
+    public ResponseEntity<Page<ProblemsPageModel>> getAllProblems(Pageable pageable) {
+        Page<ProblemsPageModel> paginatedData = problemService.getAllProblems(pageable);
         return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 
@@ -46,10 +43,8 @@ public class ProblemController {
                                             @RequestParam(defaultValue = "") String problemCode,
                                             @RequestParam(defaultValue = "") String title,
                                             @RequestParam(defaultValue = "") String contestName,
-                                            @RequestParam(defaultValue = "0") Integer pageNo,
-                                            @RequestParam(defaultValue = "25") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        Page<ProblemsPageModel> paginatedData = problemService.filterProblems(source, problemCode, title, contestName, paging);
+                                            Pageable pageable) {
+        Page<ProblemsPageModel> paginatedData = problemService.filterProblems(source, problemCode, title, contestName, pageable);
         return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 
@@ -69,28 +64,22 @@ public class ProblemController {
 
     @GetMapping("/search")
     @Operation(summary = "Search problems by title", description = "Search problems by their title.")
-    public ResponseEntity<Page<ProblemsPageModel>> searchByTitle(@RequestParam String title, @RequestParam(defaultValue = "0") Integer pageNo,
-                                           @RequestParam(defaultValue = "25") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        Page<ProblemsPageModel> paginatedData = problemService.searchByTitle(title, paging);
+    public ResponseEntity<Page<ProblemsPageModel>> searchByTitle(@RequestParam String title, Pageable pageable) {
+        Page<ProblemsPageModel> paginatedData = problemService.searchByTitle(title, pageable);
         return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 
     @GetMapping("/source")
     @Operation(summary = "Search problems by source", description = "Search problems by their source.")
-    public ResponseEntity<Page<ProblemsPageModel>> searchBySource(@RequestParam String source, @RequestParam(defaultValue = "0") Integer pageNo,
-                                           @RequestParam(defaultValue = "25") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        Page<ProblemsPageModel> paginatedData = problemService.searchBySource(source, paging);
+    public ResponseEntity<Page<ProblemsPageModel>> searchBySource(@RequestParam String source, Pageable pageable) {
+        Page<ProblemsPageModel> paginatedData = problemService.searchBySource(source, pageable);
         return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 
     @GetMapping("/code")
     @Operation(summary = "Search problems by problem code", description = "Search problems by their problem code.")
-    public ResponseEntity<Page<ProblemsPageModel>> searchByProblemCode(@RequestParam String problemCode, @RequestParam(defaultValue = "0") Integer pageNo,
-                                                @RequestParam(defaultValue = "25") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        Page<ProblemsPageModel> paginatedData = problemService.searchByProblemCode(problemCode, paging);
+    public ResponseEntity<Page<ProblemsPageModel>> searchByProblemCode(@RequestParam String problemCode, Pageable pageable) {
+        Page<ProblemsPageModel> paginatedData = problemService.searchByProblemCode(problemCode, pageable);
         return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 

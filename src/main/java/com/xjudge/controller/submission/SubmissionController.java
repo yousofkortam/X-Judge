@@ -6,7 +6,6 @@ import com.xjudge.service.submission.SubmissionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,21 +20,16 @@ public class SubmissionController {
     private final SubmissionService submissionService;
 
     @GetMapping
-    public ResponseEntity<Page<SubmissionPageModel>> getAllSubmissions(@RequestParam(defaultValue = "0") Integer pageNo,
-                                                                       @RequestParam(defaultValue = "25") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        return new ResponseEntity<>(submissionService.getAllSubmissions(paging) , HttpStatus.OK);
+    public ResponseEntity<Page<SubmissionPageModel>> getAllSubmissions(Pageable pageable) {
+        return new ResponseEntity<>(submissionService.getAllSubmissions(pageable) , HttpStatus.OK);
     }
 
     @GetMapping(params = {"userHandle" , "oj" , "problemCode" , "language"})
     public ResponseEntity<Page<SubmissionPageModel>> filterSubmissions(@RequestParam(required = false ,defaultValue = "") String userHandle,
                                                       @RequestParam(required = false ,defaultValue = "") String oj,
                                                       @RequestParam(required = false ,defaultValue = "") String problemCode,
-                                                      @RequestParam(required = false ,defaultValue = "") String language,
-                                                      @RequestParam(defaultValue = "0") Integer pageNo,
-                                                      @RequestParam(defaultValue = "25") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        return new ResponseEntity<>(submissionService.filterSubmissions(userHandle, oj, problemCode, language, paging) , HttpStatus.OK);
+                                                      @RequestParam(required = false ,defaultValue = "") String language, Pageable pageable) {
+        return new ResponseEntity<>(submissionService.filterSubmissions(userHandle, oj, problemCode, language, pageable) , HttpStatus.OK);
     }
 
     @GetMapping("/{id}")

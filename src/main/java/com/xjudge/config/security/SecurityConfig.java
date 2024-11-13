@@ -35,12 +35,10 @@ public class SecurityConfig {
                             try {
                                 configure
 //                                        .requestMatchers("/**").permitAll() // Uncomment this line to disable security, do your work and then comment it back
-                                        .requestMatchers("/description/**").permitAll()
                                         .requestMatchers("/css/**").permitAll()
                                         .requestMatchers("/js/**").permitAll()
                                         .requestMatchers("/auth/change-password").authenticated()
                                         .requestMatchers("/auth/**").permitAll()
-                                        .requestMatchers("/group/public", "/group/{id}").permitAll()
                                         .requestMatchers("/swagger-ui/**").permitAll()
                                         .requestMatchers(HttpMethod.GET).permitAll()
                                         .anyRequest().authenticated()
