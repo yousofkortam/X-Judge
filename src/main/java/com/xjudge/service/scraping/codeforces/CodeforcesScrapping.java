@@ -7,6 +7,7 @@ import com.xjudge.repository.SectionRepository;
 import com.xjudge.repository.ValueRepository;
 import com.xjudge.service.scraping.strategy.ScrappingStrategy;
 import lombok.RequiredArgsConstructor;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -35,10 +36,12 @@ public class CodeforcesScrapping implements ScrappingStrategy {
         String problemId = splitCode[1];
         String targetProblem = URL + "/problemset/problem/" + contestId + "/" + problemId;
         String contestLink = URL + "/contest/" + contestId;
+        Connection connection;
         Document problemDocument;
 
         try {
-            problemDocument = Jsoup.connect(targetProblem).get();
+            connection = Jsoup.connect(targetProblem);
+            problemDocument = connection.get();
         } catch (IOException e) {
             throw new NoSuchElementException("Problem not found");
         }

@@ -100,10 +100,8 @@ public class ContestController {
                                                                               @RequestParam(required = false ,defaultValue = "") String problemCode,
                                                                               @RequestParam(required = false ,defaultValue = "") String result,
                                                                               @RequestParam(required = false ,defaultValue = "") String language,
-                                                                              @RequestParam(defaultValue = "0") Integer pageNo,
-                                                                              @RequestParam(defaultValue = "25") Integer size ,
+                                                                              Pageable pageable,
                                                                               @RequestParam(defaultValue = "") String password){
-        Pageable pageable = PageRequest.of(pageNo, size);
         return new ResponseEntity<>(contestService.getContestSubmissions(id,userHandle , problemCode,result , language , pageable) , HttpStatus.OK);
     }
 
@@ -118,61 +116,48 @@ public class ContestController {
     @GetMapping("/search")
     public  ResponseEntity<Page<ContestPageModel>> searchByTitleAndOwner( @RequestParam(defaultValue = "" , required = false) String title ,
                                              @RequestParam(defaultValue = "" , required = false) String owner ,
-                                             @RequestParam(defaultValue = "0") Integer pageNo,
-                                             @RequestParam(defaultValue = "25") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        Page<ContestPageModel> contestPageModels = contestService.searchContestByTitleOrOwner(title ,owner , paging);
+                                             Pageable pageable) {
+        Page<ContestPageModel> contestPageModels = contestService.searchContestByTitleOrOwner(title, owner, pageable);
         return new ResponseEntity<>(contestPageModels , HttpStatus.OK);
     }
 
     @GetMapping(params = {"status"})
-    public  ResponseEntity<Page<ContestPageModel>> filterByStatus( @RequestParam(defaultValue = "RUNNING") String status ,
-                                             @RequestParam(defaultValue = "0") Integer pageNo,
-                                             @RequestParam(defaultValue = "25") Integer size) {
-        return new ResponseEntity<>(contestService.getContestByStatus(status, pageNo , size) , HttpStatus.OK);
+    public  ResponseEntity<Page<ContestPageModel>> filterByStatus( @RequestParam(defaultValue = "RUNNING") String status, Pageable pageable) {
+        return new ResponseEntity<>(contestService.getContestByStatus(status, pageable.getPageNumber(), pageable.getPageSize()) , HttpStatus.OK);
     }
 
     @GetMapping(params = {"type" , "status"})
-    public ResponseEntity<Page<ContestPageModel>> getContestByType(@RequestParam(defaultValue = "CLASSIC") String type , @RequestParam(required = false , defaultValue = "") String status ,
-                                               @RequestParam(defaultValue = "0") Integer pageNo,
-                                               @RequestParam(defaultValue = "25") Integer size){
-        Pageable pageable = PageRequest.of(pageNo , size);
+    public ResponseEntity<Page<ContestPageModel>> getContestByType(@RequestParam(defaultValue = "CLASSIC") String type, @RequestParam(required = false , defaultValue = "") String status, Pageable pageable){
         return new ResponseEntity<>(contestService.getContestsByType(type , status , pageable) , HttpStatus.OK);
     }
 
 
     @GetMapping(params = {"visibility" , "status"})
     public ResponseEntity<Page<ContestPageModel>> getContestByVisibility(@RequestParam(defaultValue = "PUBLIC") String visibility , @RequestParam(required = false , defaultValue = "") String status ,
-                                              @RequestParam(defaultValue = "0") Integer pageNo,
-                                              @RequestParam(defaultValue = "25") Integer size){
-        Pageable pageable = PageRequest.of(pageNo , size);
+                                              Pageable pageable){
         return new ResponseEntity<>(contestService.getContestsByVisibility(visibility , status , pageable) , HttpStatus.OK);
     }
 
     @GetMapping("/mine")
     public ResponseEntity<Page<ContestPageModel>> getContestOfUser(Authentication authentication , @RequestParam(required = false , defaultValue = "") String status ,
-                                                    @RequestParam(defaultValue = "0") Integer pageNo,
-                                                    @RequestParam(defaultValue = "25") Integer size){
+                                                                   Pageable pageable){
         if (authentication == null) {
             throw new UnauthenticatedException("You need to be authenticated to perform this operation");
         }
-        Pageable pageable = PageRequest.of(pageNo , size);
         return new ResponseEntity<>(contestService.getContestsOfLoginUser(authentication , status , pageable) , HttpStatus.OK);
     }
 
     @GetMapping(params = {"category" , "status" , "title" , "owner"})
     public ResponseEntity<Page<ContestPageModel>> globalSearch(@RequestParam(defaultValue = "") String category, @RequestParam(required = false , defaultValue = "") String status ,
-                                                    @RequestParam(defaultValue = "" , required = false) String title ,
-                                                    @RequestParam(defaultValue = "" , required = false) String owner ,
-                                                    @RequestParam(defaultValue = "0") Integer pageNo,
-                                                    @RequestParam(defaultValue = "25") Integer size, Authentication authentication){
+                                                    @RequestParam(defaultValue = "" , required = false) String title,
+                                                    @RequestParam(defaultValue = "" , required = false) String owner,
+                                                               Pageable pageable, Authentication authentication){
         if(category.equals("mine")) {
             if (authentication == null) {
                 throw new UnauthenticatedException("You need to be authenticated to perform this operation");
             }
             category = authentication.getName();
         }
-        Pageable pageable = PageRequest.of(pageNo , size);
         return new ResponseEntity<>(contestService.searchByVisibilityOrTypeOrUserAndOwnerAndTitle(category , title , owner ,status, pageable) , HttpStatus.OK);
     }
 }

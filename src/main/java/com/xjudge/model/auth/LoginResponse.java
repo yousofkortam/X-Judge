@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 public class LoginResponse {
 
     private int statusCode;
-
     private String token;
 
 }

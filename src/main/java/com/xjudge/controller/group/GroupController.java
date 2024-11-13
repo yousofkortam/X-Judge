@@ -13,7 +13,6 @@ import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,24 +32,17 @@ public class GroupController {
     private final UserGroupService userGroupService;
 
     @GetMapping("/public")
-    public ResponseEntity<Page<GroupModel>> getAllGroups(Principal connectedUser, @RequestParam(defaultValue = "0") Integer pageNo,
-                                                @RequestParam(defaultValue = "25") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        Page<GroupModel> paginatedData = groupService.getAllPublicGroups(connectedUser, paging);
+    public ResponseEntity<Page<GroupModel>> getAllGroups(Principal connectedUser, Pageable pageable) {
+        Page<GroupModel> paginatedData = groupService.getAllPublicGroups(connectedUser, pageable);
 
         return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 
     @GetMapping("/userHandle")
-    public ResponseEntity<Page<GroupModel>> getGroupsByUserHandle(
-            Principal connectedUser,
-            @RequestParam(defaultValue = "0") Integer pageNo,
-            @RequestParam(defaultValue = "25") Integer size
-    ) {
+    public ResponseEntity<Page<GroupModel>> getGroupsByUserHandle(Principal connectedUser, Pageable pageable) {
         Authentication.checkAuthentication(connectedUser);
-        Pageable paging = PageRequest.of(pageNo, size);
         String userHandle = connectedUser.getName();
-        Page<GroupModel> paginatedData = groupService.getGroupsByUserHandle(connectedUser, userHandle, paging);
+        Page<GroupModel> paginatedData = groupService.getGroupsByUserHandle(connectedUser, userHandle, pageable);
         return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 
@@ -154,28 +146,20 @@ public class GroupController {
     }
 
     @GetMapping("/{groupId}/members")
-    public ResponseEntity<Page<GroupMemberModel>> getGroupMembers(
-            @PathVariable Long groupId,
-            @RequestParam(defaultValue = "0") Integer pageNo,
-            @RequestParam(defaultValue = "15") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        Page<GroupMemberModel> groupMembers = groupService.getGroupMembers(groupId, paging);
+    public ResponseEntity<Page<GroupMemberModel>> getGroupMembers(@PathVariable Long groupId, Pageable pageable) {
+        Page<GroupMemberModel> groupMembers = groupService.getGroupMembers(groupId, pageable);
         return new ResponseEntity<>(groupMembers, HttpStatus.OK);
     }
 
     @GetMapping("/userRole/{groupId}")
-   public String getUserRole(Principal connectedUser, @PathVariable Long groupId){
+   public ResponseEntity<String> getUserRole(Principal connectedUser, @PathVariable Long groupId){
         Authentication.checkAuthentication(connectedUser);
-        return userGroupService.findRoleByUserAndGroupId(connectedUser,groupId);
+        return new ResponseEntity<>(userGroupService.findRoleByUserAndGroupId(connectedUser,groupId), HttpStatus.OK);
    }
 
     @GetMapping("/search")
-    public ResponseEntity<Page<Group>> searchByName(
-            @RequestParam(defaultValue = "", required = false) String name,
-            @RequestParam(defaultValue = "0") Integer pageNo,
-            @RequestParam(defaultValue = "25") Integer size) {
-        Pageable paging = PageRequest.of(pageNo, size);
-        Page<Group> paginatedData = groupService.searchGroupByName(name, paging);
+    public ResponseEntity<Page<Group>> searchByName(@RequestParam(defaultValue = "", required = false) String name, Pageable pageable) {
+        Page<Group> paginatedData = groupService.searchGroupByName(name, pageable);
         return new ResponseEntity<>(paginatedData, HttpStatus.OK);
     }
 
